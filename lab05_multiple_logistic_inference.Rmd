@@ -1,6 +1,6 @@
 ---
 title: "Lab07 - Multiple Logistic Regression Inference"
-author: "What's your name?"
+author: "Yian Ding"
 output: pdf_document
 ---
 
@@ -18,6 +18,7 @@ Run the code chunk below to load packages needed for this lab.
 library(readr)
 library(dplyr)
 library(ggplot2)
+library(caret)
 ```
 
 ## Refugees
@@ -69,24 +70,54 @@ head(refugees)
 
 ```{r}
 
+logistic_fit <- train(
+  form = judge_decision ~ judge + independent_decision + case_language + claim_location + logit_success,
+  data = refugees,
+  family = "binomial",
+  method = "glm",
+  trControl = trainControl(method = "none")
+)
+summary(logistic_fit$finalModel)
+logistic_fit_2 <- train(
+  form = judge_decision ~ judge + independent_decision + case_language + logit_success,
+  data = refugees,
+  family = "binomial",
+  method = "glm",
+  trControl = trainControl(method = "none")
+)
+summary(logistic_fit_2$finalModel)
+
 ```
+
 
 ## Problem 2: The real way to answer the question posed above is with a single test that compares the full model fit above with a reduced model that does not include the `claim_location` variable.  Perform this test now.  What is your conclusion?
 
 ```{r}
-
+anova(logistic_fit_2$finalModel,logistic_fit$finalModel,test="Chisq")
 ```
+The p value is bigger than 0.05, thus we cannot reject the null hypothesis that the `claim_location` variable is not important for predicting the judge's decision.
 
 ## Problem 3: After controlling for an independent expert's recommendation, the language the case was heard in, and the overall success rate for all cases from the applicant's origin nation, are there statistically significant differences in the chances of granting an appeal for different judges?  To answer this question, fit a reduced model that includes only `independent_decision`, `case_language`, and `logit_success` as explanatory variables, then conduct a hypothesis test comparing this model to the one from problem 2 that also includes `judge`.  What is your conclusion?
 
 ```{r}
-
+logistic_fit_3 <- train(
+  form = judge_decision ~ independent_decision + case_language + logit_success,
+  data = refugees,
+  family = "binomial",
+  method = "glm",
+  trControl = trainControl(method = "none")
+)
+summary(logistic_fit_3$finalModel)
+anova(logistic_fit_3$finalModel,logistic_fit_2$finalModel,test="Chisq")
 ```
+There are statistically significant differences in the chances of granting an appeal for different judges because the p value is 3.12e-07, which indciates that the two model differs. 
 
 ## Problem 4: In your final model fit (whichever seems best based on the hypothesis tests you conducted above), what is the interpretation of the estimated coefficient for `logit_success`?
 
 Don't worry about the units of `logit_success` (your answer can start with "If logit_success increases by one unit...").
 
-
+If logit_success increases by one unit, the odds of judge decision succession rate will increase by  1.3005.
 
 ## Problem 5: If you were an immigrant applying for refugee status, would you want your case to be heard by the judge named Iacobucci?  Explain by interpreting one of the coefficients in your final model fit.
+
+NO, because the variable judge Iacobucci has an estimate of  -2.56776 (significant), which means that if the case is heard by Judge Iacobucci, the odds of judge decision succession rate will decrease by 2.56776, which is not what I want. 
